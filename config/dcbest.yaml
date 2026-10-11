@@ -1,0 +1,46 @@
+# dcbest-shorts-producer 설정 (디시 실시간 베스트 게시글 -> 재구성형 쇼츠)
+# 공통 설정(도구 경로, 채널 색, TTS 모델·음성, BGM mood_map, 자막 크기)은 config/channels.yaml을 그대로 쓴다.
+# channels.yaml의 tts/bgm/subtitles/gif 'enabled: false'(방송 구간 추출형 기준)는 이 루틴에 적용하지 않는다.
+# 이 루틴은 script.json에 "narration": "tts"를 넣어 TTS를 강제한다.
+
+routine: dcbest
+source:
+  list_url: "https://gall.dcinside.com/board/lists?id=dcbest&list_num=100&page=1"   # 100개씩 보기 (약 24시간치)
+  list_script: tools/dcbest_list.js     # 목록 페이지에서 실행 -> sources/dcbest/YYYY-MM-DD_list.json
+  post_script: tools/dcbest_post.js     # 게시글 페이지에서 실행 -> output/dcbest/YYYY-MM-DD/NN/post.json
+  login: false                          # 로그인·댓글·추천 등 쓰기 동작 없음
+
+ranking:
+  tool: tools/dcbest_rank.py
+  top_ratio: 0.10                       # 조회수·추천 각각 상위 10%
+  primary: both                         # 1차 후보: 조회 상위 10% AND 추천 상위 10%
+  fallback: either                      # 1차가 모자랄 때만: score(두 백분위 평균) 상위 10% 안에서 한쪽만 상위 10%
+  exclude_used_days: 7                  # state/dcbest_used.json 기준 같은 글·같은 소재 7일 내 재사용 금지
+
+validation:                             # SKILL 2단계. 하나라도 '불가'면 건너뜀
+  min_body_chars: 150                   # 본문 텍스트(공백 제외) 최소. 300자 이상 권장
+  max_external_article_ratio: 0.5       # 본문 절반 이상이 언론 기사 전재면 제외
+  require_beats: 3                      # 상황-전개-반전/결론 3비트 이상
+
+production:
+  shorts_per_day: 3                     # 2026-10-11 운영자 지정
+  output_dir: output/dcbest             # output/dcbest/YYYY-MM-DD/NN (NN = 01~03)
+  captures_dir: assets/captures/dcbest  # 게시글 카드 이미지
+  queue: sources/dcbest_queue.yaml
+  category: community                   # tts_prepare.py 톤: 친구에게 썰을 풀듯 생생하고 리듬감 있는 톤
+
+cards:                                  # tools/make_post_cards.py (1080x680, render_short.py 중앙 패널 크기)
+  per_video: [7, 10]
+  screen_time_ratio: [0.60, 0.75]
+  themes: [light, dark]                 # 영상마다 번갈아
+  credit: "출처: 디시인사이드 실시간 베스트 [갤러리] 게시글"
+
+upload:
+  channel: 꿀잼잠
+  channel_id: "UCIiJbXHPhK-5FFmfAvZ8PGQ"
+  mode: immediate_public                # QA 통과 즉시 공개 (story-shorts-producer와 같은 절차)
+  log: upload_log.json                  # nn은 "d01"~"d03" (기존 루틴 번호와 겹치지 않게), routine: dcbest
+  info_tool: tools/make_upload_info.py  # meta.json -> upload_description + upload_info.md
+
+schedule:
+  daily_at: "09:00"                     # Asia/Seoul, 예약 작업 dcbest-shorts-daily
