@@ -9,6 +9,7 @@
 !/.claude/skills/
 /.claude/skills/*
 !/.claude/skills/dcbest-shorts-producer/
+!/.claude/skills/person-clip-shorts/
 
 !/config/
 /config/*
